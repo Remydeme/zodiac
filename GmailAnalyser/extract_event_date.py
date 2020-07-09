@@ -1,5 +1,6 @@
 import json
 import os
+from zodiac_sutime.sutime import SUTime
 
 
 class EventExtractor():

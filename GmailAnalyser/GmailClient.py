@@ -201,13 +201,6 @@ class GMailClient:
 
 
 
-if __name__ == "__main__":
-    client = GMailClient(path_to_credentials='/credentials.json')
-    mails_df = client.MessageFromForums(query='people',  maxResults=1)
-    print(mails_df.body[0])
-    analyser = GMailAnalytics()
-    analyser.fit(dataframe=mails_df)
-    #mails_df = analyser.__transform()
-    #analyser.df_.to_csv('./people_forums_mail.csv', header=True)
+
 
 
