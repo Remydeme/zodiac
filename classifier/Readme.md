@@ -42,8 +42,3 @@ classifier.stats()
 classifier.save_wrights(path='./model_1900.weights')
 
 ```
-
-
-## Licence 
-
-MIT Licence
