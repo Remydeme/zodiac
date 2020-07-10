@@ -26,11 +26,12 @@ from GmailAnalyser.GmailAnalytics import GmailAnalytics
 
 # Create client object with our credentials.json file
 # This operation must create a token.pickle file in the directory 
-# where  you execute this code
+# where  you execute this code. 
 client = GMailClient(path_to_credentials='/credentials.json')
 
 # This method fetch all the mail from your forum that
 # are from:people mailing list 
+#maxResult limit the result to one mail. 
 mails_df = client.MessageFromForums(query='people',  maxResults=1)
 
 # display the body of the first mail in the dataframe 
@@ -44,7 +45,7 @@ analyser.fit(dataframe=mails_df)
 
 
 # return all the email text as list 
-text_list = df['body'].to_list()
+text_list = mails_df['body'].to_list()
 
 
 cleaner = ArticleCleaner()
