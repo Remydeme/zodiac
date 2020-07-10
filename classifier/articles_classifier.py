@@ -62,6 +62,34 @@ class ArticleClassifier(ClassifierMixin):
         # Training logistic regression model on train data
         self.classifier_.fit(self.x_vec_, y)
 
+
+    def predict(self, x):
+        """
+        Predict class labels for samples in X.
+        :parameter
+        ----------
+        :param X: {list of str}
+            list of string
+        :return: list of float
+            return the predicted class for each element
+        """
+        x_vec = self.vectorizer_.transform(x)
+        return self.classifier_.predict(x_vec)
+
+    def predict_proba(self, x):
+        """
+        Probability estimates.
+        The returned estimates for all classes are ordered by the label of classes.
+        :parameter
+        ----------
+        :param X: {list of str}
+            list of string
+        :return: list of float
+            return the predicted class for each element
+        """
+        x_vec = self.vectorizer_.transform(x)
+        return self.classifier_.predict_proba(x_vec)
+
     def score(self, X, y, average='samples', threshold=0.5):
         """
         Compute the jaccard score using the given parameters

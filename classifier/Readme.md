@@ -34,10 +34,7 @@ classifier.fit(cleaned_text)
 
 # return the jaccard score 
 classifier.score()
-
-# display the jaccard score for different threshold
-classifier.stats() 
-
+ 
 # save your model 
 classifier.save_wrights(path='./model_1900.weights')
 
