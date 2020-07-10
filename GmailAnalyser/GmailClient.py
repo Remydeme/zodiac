@@ -167,9 +167,15 @@ class GMailClient:
         """
         Fetch all the message from the forum section.
         Note : Used 'me' as default UserID
-        :arg
-            :param query {string}i: to filter the message filter
-            :param userID {string}: user id def
+        :parameter
+        -----------
+            :param : query {string}i
+                    to filter the message filter
+            :param  : userID {string}
+                        userID {str}: User's email address. The special value "me" can be used to indicate the authenticated user.
+            :param : maxResults {int}
+                    limit the result to this value. example : if set to 1 you will only get one mail. (Only if there is
+                     elements that match the query)
         :return:
             {pandas.DataFrame} : dataframe that contains all the message metadata and the message text
         """
