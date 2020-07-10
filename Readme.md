@@ -50,7 +50,7 @@ text_list = mails_df['body'].to_list()
 
 cleaner = ArticleCleaner()
 
-cleaned_text = cleaner.transform(text_list)
+cleaned_text = cleaner.fit_transform(text_list)
 
 classifier = ArcticleClassifier(ngram=(1,2))
 
