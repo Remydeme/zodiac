@@ -3,7 +3,7 @@ import re
 import sys
 import warnings
 from sklearn.base import TransformerMixin, BaseEstimator
-
+import unidecode
 if not sys.warnoptions:
     warnings.simplefilter("ignore")
 
@@ -42,6 +42,14 @@ def cleanPunc(sentence):
     return cleaned
 
 def keepAlpha(sentence):
+    """
+    Remove all characters that are not alphanumeric
+    :parameter
+    ----------
+        :param sentence: {str}
+            uncleaned sentence
+    :return:
+    """
     alpha_sent = ""
     for word in sentence.split():
         alpha_word = re.sub('[^a-z A-Z]+', ' ', word)
@@ -50,6 +58,27 @@ def keepAlpha(sentence):
     alpha_sent = alpha_sent.strip()
     return alpha_sent
 
+def removeAccent(sentence):
+    """
+    Remove accent from the string
+    :param sentence:
+    :return:
+    """
+    cleaned_sentence = unidecode.unidecode(sentence)
+    return cleaned_sentence
+
+def removedDuplicateSpace(sentence):
+    return " ".join(sentence.split())
+
+
+
+def standardiseText(sentence):
+        cleaned_text = sentence.replace(r"http\S+", "")
+        cleaned_text = cleaned_text.replace(r"http", "")
+        cleaned_text = cleaned_text.replace(r"@\S+", "")
+        #cleaned_text = sentence.replace(r"[^A-Za-z0-9(),!?@\'\`\"\_\n]", " ")
+        cleaned_text = cleaned_text.replace(r"@", "at")
+        return cleaned_text
 
 def prepareText(text, punctuation=True, lemming=True, stop_word=True):
     """
@@ -92,7 +121,9 @@ def clean_text(text):
     text = text.lower()
     text = cleanHtml(text)
     text = cleanPunc(text)
-    text = keepAlpha(text)
+    text = removeAccent(text)
+    text = standardiseText(text)
+    text = removedDuplicateSpace(text)
     return text
 
 
@@ -117,7 +148,7 @@ class TextCleaner(TransformerMixin, BaseEstimator):
             (list) cleaned texts
         """
         self.cleaned_text_ = [clean_text(text) for text in texts]
-        return self.clean_text_
+        return self.cleaned_text_
 
 
 

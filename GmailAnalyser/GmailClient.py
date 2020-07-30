@@ -8,9 +8,12 @@ from apiclient import errors
 import pandas as pd
 import base64
 import email
-
+from email.message import Message
+import re
+import quopri
 
 from GmailAnalyser.GmailAnalytics import GMailAnalytics
+
 """
 Description of the GMAIL API : https://developers.google.com/gmail/api/v1/reference/users/messages#resource
 """
@@ -24,7 +27,7 @@ class GMailClient:
     _scope = []
     _userID = ""
 
-    def __init__(self, path_to_credentials, scope= ['https://www.googleapis.com/auth/gmail.readonly'], userID="me"):
+    def __init__(self, path_to_credentials, scope=['https://www.googleapis.com/auth/gmail.readonly'], userID="me"):
         """
         @:param path_to_credentials : path to the user credetnials file download from gmailPai console
         @:param scope : operation readonly by default
@@ -43,10 +46,11 @@ class GMailClient:
             time.
         """
         try:
+            creds = None
             if os.path.exists('token.pickle'):
                 with open('token.pickle', 'rb') as token:
                     creds = pickle.load(token)
-            #If there are no (valid) credentials available, let the user log in.
+            # If there are no (valid) credentials available, let the user log in.
             if not creds or not creds.valid:
                 if creds and creds.expired and creds.refresh_token:
                     creds.refresh(Request())
@@ -54,15 +58,12 @@ class GMailClient:
                     flow = InstalledAppFlow.from_client_secrets_file(
                         self._path_to_credentials, self._scope)
                     creds = flow.run_local_server(port=0)
-                #Save the credentials for the next run
+                # Save the credentials for the next run
                 with open('token.pickle', 'wb') as token:
                     pickle.dump(creds, token)
             self._service = build('gmail', 'v1', credentials=creds)
-        except Exception:
-            print("Failed to create service an error occured ")
-
-
-
+        except Exception as err:
+            print(f"Failed to create service an error occured : {err}")
 
     def MessageIDSMatchingQuery(self, labelsIds, maxResults=None, query='', userID='me'):
         """
@@ -80,20 +81,20 @@ class GMailClient:
             {dico}: dictionnary containing all the message informations
         """
         try:
-            response = self._service.users().messages().list(userId=userID, labelIds=labelsIds, q=query, maxResults=maxResults).execute()
+            response = self._service.users().messages().list(userId=userID, labelIds=labelsIds, q=query,
+                                                             maxResults=maxResults).execute()
             messages = []
             if 'messages' in response:
                 messages.extend(response['messages'])
             while 'nextPageToken' in response:
                 page_token = response['nextPageToken']
                 response = self._service.users().messages().list(userId=userID, labelIds=labelsIds, q=query,
-                                                                 pageToken=page_token).execute()
+                                                                 pageToken=page_token, maxResults=maxResults).execute()
                 messages.extend(response['messages'])
                 return messages
         except errors.HttpError as error:
             print(f"Http error occured {error}")
-            return  None
-
+            return None
 
     def ListID(self):
         """
@@ -110,19 +111,33 @@ class GMailClient:
             print('No labels found.')
         else:
             print('Labels:')
-            return {label['name']:label['id'] for label in labels}
-
+            return {label['name']: label['id'] for label in labels}
 
     def _clean_email_text(self, text):
-        if type(text) is str:
-            splited = text.split('\n')
-            body = ""
-            for field in splited:
-                if len(field) > 0:
-                    if field[0] != '>':
-                        body += field + '\n'
-            return body
-        return None
+        raw_html = text
+        if type(text) is list:
+            raw_html = text[0] # take the answer to the mail
+        cleanr = re.compile('<.*?>|&([a-z0-9]+|#[0-9]{1,6}|#x[0-9a-f]{1,6});')
+        cleantext = re.sub(cleanr, '', raw_html)
+        return  cleantext.encode(encoding='utf-8').decode('iso-8859-1')
+
+    def GetNewMember(self):
+        """
+        Method build to fetch all mail that concern new octo members
+        :return:
+        """
+        pass
+
+    def getPayload(self, paypload):
+        if type(paypload) is str:
+            return paypload
+        elif type(paypload) is list:
+            return self.getPayload(paypload[0])
+        elif  type(paypload) is Message:
+            return self.getPayload(paypload._payload)
+        else:
+            return ""
+
 
     def GetMessage(self, userID, msgID):
         """
@@ -141,17 +156,16 @@ class GMailClient:
             email_dico = {}
             for key in email_data.keys():
                 email_dico[key] = email_data[key]
-            payload = email_data._payload
-            if type(payload) is list:
-                email_dico["body"] = self._clean_email_text(payload[0]._payload)
+            email_body = self.getPayload(email_data._payload)
+            email_dico["body"] = self._clean_email_text(email_body)
+            if type(email_data._payload) is list:
                 email_dico["is_initial_mail"] = False
-            elif type(payload) is str:
-                email_dico["body"] = payload
+            elif type(email_data._payload) is str:
                 email_dico["is_initial_mail"] = True
             else:
                 email_dico["body"] = 'empty'
+                email_dico["is_initial_mail"] = False
             email_dico['threadId'] = message['threadId']
-            email_dico["is_initial_mail"] = False
             return email_dico
         except errors.HttpError as error:
             print(f'An error occurred: {error}')
@@ -159,9 +173,6 @@ class GMailClient:
         except Exception as error:
             print(f'An error occured while fetching parameters : {error}')
             return message
-
-
-
 
     def MessageFromForums(self, query, maxResults=None):
         """
@@ -180,7 +191,7 @@ class GMailClient:
             {pandas.DataFrame} : dataframe that contains all the message metadata and the message text
         """
         try:
-            message_ids_array = client.MessageIDSMatchingQuery(query=query, labelsIds=['CATEGORY_FORUMS'], maxResults=maxResults)
+            message_ids_array = self.MessageIDSMatchingQuery(query=query, labelsIds=['CATEGORY_FORUMS'], maxResults=15)
             messages = []
             if message_ids_array != None:
                 for ids in message_ids_array:
@@ -189,10 +200,10 @@ class GMailClient:
                     messages.append(message)
                 dataframe = pd.DataFrame(messages)
                 # Only keep the field containing the useful informations
-                dataframe = dataframe[['body', 'X-Spam-Checked-In-Group', 'X-Original-Sender', 'To', 'Date', 'From',
+                dataframe = dataframe[['body', 'X-Spam-Checked-In-Group', 'X-Original-Sender', 'To', 'Date',
                                        'In-Reply-To', 'Delivered-To', 'Cc', 'Subject', 'threadId', 'is_initial_mail']]
-                dataframe.rename(columns={'X-Spam-Checked-In-Group' : "mailing-list", "X-Original-Sender" : "origin",
-                                          "From" : "identity"}, inplace=True)
+                dataframe.rename(columns={'X-Spam-Checked-In-Group': "mailing-list", "X-Original-Sender": "origin", },
+                                 inplace=True)
                 dataframe['Date'] = pd.to_datetime(dataframe['Date'])
                 print(f'Done processing your forum mail that match the following query : {query}')
                 return dataframe
@@ -202,18 +213,13 @@ class GMailClient:
             return None
 
 
-
-
-
-
-
 if __name__ == "__main__":
-    client = GMailClient(path_to_credentials='/credentials.json')
-    mails_df = client.MessageFromForums(query='people',  maxResults=1)
+    client = GMailClient(path_to_credentials='credentials.json')
+    mails_df = client.MessageFromForums(query='newer_than:1d')
     print(mails_df.body[0])
     analyser = GMailAnalytics()
     analyser.fit(dataframe=mails_df)
-    mails_df = analyser.__transform()
-    #analyser.df_.to_csv('./people_forums_mail.csv', header=True)
-
-
+    results = analyser.transform(dataframe=mails_df)
+    print(mails_df.head())
+# mails_df = analyser.transform()
+# analyser.df_.to_csv('./people_forums_mail.csv', header=True)

@@ -1,0 +1,29 @@
+{
+  "server" : {
+      "host" : "localhost",
+      "port" : "8080",
+      "debug" : "True"
+  },
+  "couchbase" : {
+      "cluster" : {
+          "username" : "Administrator",
+          "password" : "password",
+          "host" : "localhost",
+          "port" : "8091"
+      },
+      "buckets" : [
+              {
+                "name" : "users",
+                "memsize" : 250
+              },
+              {
+                "name" : "emails",
+                "memsize" : 250
+              },
+              {
+               "name" : "data_update_state",
+                "memsize" : 250
+              }
+      ]
+        }
+}

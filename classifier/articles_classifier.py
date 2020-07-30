@@ -25,6 +25,7 @@ punctuations = spacy.lang.punctuation.LIST_PUNCT
 
 class ArticleClassifier(ClassifierMixin):
 
+
     def __init__(self, ngram=(1, 3), tokenizer=prepareText, max_feature=20000):
         """
         This classifier is a multi-label classifier. It have been trained on octo-articles dataset.
@@ -40,6 +41,8 @@ class ArticleClassifier(ClassifierMixin):
         """
         self.vectorizer_ = TfidfVectorizer(strip_accents='unicode', analyzer='word', ngram_range=ngram, norm='l2',
                                      tokenizer=tokenizer, max_features=max_feature)
+        # initialize classifier chains multi-label classifier
+        self.classifier_ = ClassifierChain(SVC(probability=True))
 
 
         pass
@@ -57,8 +60,7 @@ class ArticleClassifier(ClassifierMixin):
                 array of labels
         """
         self.x_vec_ = self.vectorizer_.fit_transform(X)
-        # initialize classifier chains multi-label classifier
-        self.classifier_ = ClassifierChain(SVC(probability=True))
+
         # Training logistic regression model on train data
         self.classifier_.fit(self.x_vec_, y)
 
@@ -154,8 +156,6 @@ class ArticleClassifier(ClassifierMixin):
                     path to the directory to store the classifier wieghts
         """
         joblib.dump(self.classifier_, path)
-        px.scatter(self.jaccard_scores_threshold_df_, x='threshold', y='jaccard_score', color='threshold',
-                   title='Jaccard score depending on threshold')
 
 
 
