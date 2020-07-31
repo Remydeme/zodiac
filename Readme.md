@@ -18,6 +18,7 @@ pip install zodiac
 ## Exemple 
 
 ```python 
+
 from classifier.article_classifier import ArticleClassifier
 from classifier.cleaner import ArticleCleaner
 from GmailAnalyser.GmailClient import GmailClient

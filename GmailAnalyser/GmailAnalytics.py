@@ -2,6 +2,7 @@ import pandas as pd
 import spacy
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.feature_extraction.text import TfidfVectorizer
+from classifier.cleaner import prepareText
 import re
 import numpy as np
 
@@ -16,31 +17,27 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
     punctuations = spacy.lang.punctuation.LIST_PUNCT
 
     def __init__(self):
-        self.vectorizer_ = TfidfVectorizer(ngram_range=(1, 3), tokenizer=self._prepareText)
-
-
+        self.vectorizer_ = TfidfVectorizer(ngram_range=(1, 3), tokenizer=prepareText)
 
     def fit(self, dataframe):
-        if type(dataframe) != pd.DataFrame:
-            self.df_ = dataframe
-            return self
-        else:
-            raise TypeError(f"{dataframe} is {type(dataframe)} but expected type is {pd.DataFrame}")
+        return self
 
-    def transform(self):
+    def transform(self, dataframe):
         """
             Apply all the tranformation on the mail dataframe
         :return:
         """
-        self.__analyse_thread(self.df_)
-        self.df_['response'] = self.df_.Subject.apply(isResponse)
-        self.df_['body'] = self.df_.body.apply(cleanBody)
-        self.__standardize_text()
-        self.hotMail = self.hotMail(self.df_)
+        df = dataframe.copy()
+        self.__analyse_thread(df)
+        df['response'] = df.Subject.apply(isResponse)
+        df['body'] = df.body.apply(cleanBody)
+        self.__standardize_text(df)
+        #self.hotMail_ = self.__hotMail(df)
+        self.important_mail_ = self.__filter(df, emails=[''])
         #self.df_['theme'] = self.df_.body.apply(self._theme)
-        return self.df_
+        return df
 
-    def __hotMail(self, dataframe):
+    def __hotMail(self, df):
         """
         Analyse the dataframe that contains all the mail informations and add a row
         parameter
@@ -51,11 +48,11 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
             :return: pandas.Dataframe
                 dataframe sort by mail importance (we use the number of response to the mail to determine is importance)
         """
-        dataframe = dataframe[dataframe.is_initial_mail == True]
-        dataframe = dataframe.sort_values(by='importance_thread', ascending=False)
-        return dataframe
+        df = df[df.is_initial_mail == True]
+        df = df.sort_values(by='importance_thread', ascending=False)
+        return df
 
-    def __filter(self, emails):
+    def __filter(self,df, emails):
         """
         This function return a dataframe containing all the message that was send by 'emails' adress list
           :parameter
@@ -64,10 +61,9 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
           return:
             pd.DataFrame
         """
-        dataframe = self.df_
         filtered_emails_list = []
         for email in emails:
-            mails = self.dataframe[dataframe.origin == email]
+            mails = df[df.origin == email]
             filtered_emails_list.append(mails)
         return pd.concat(filtered_emails_list)
 
@@ -101,17 +97,17 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
 
             return clean_text
 
-    def __standardize_text(self, text_field='body'):
-        self.df_[text_field] = self.df_[text_field].str.replace(r"http\S+", "")
-        self.df_[text_field] = self.df_[text_field].str.replace(r"http", "")
-        self.df_[text_field] = self.df_[text_field].str.replace(r"@\S+", "")
-        self.df_[text_field] = self.df_[text_field].str.replace(r"[^A-Za-z0-9(),!?@\'\`\"\_\n]", " ")
-        self.df_[text_field] = self.df_[text_field].str.replace(r"@", "at")
+    def __standardize_text(self, df, text_field='body'):
+        df[text_field] = df[text_field].str.replace(r"http\S+", "")
+        df[text_field] = df[text_field].str.replace(r"http", "")
+        df[text_field] = df[text_field].str.replace(r"@\S+", "")
+        df[text_field] = df[text_field].str.replace(r"[^A-Za-z0-9(),!?@\'\`\"\_\n]", " ")
+        df[text_field] = df[text_field].str.replace(r"@", "at")
 
-    def __theme(self, text):
-        threadId = self.df_.threadId.unique()
+    def __theme(self, df, text):
+        threadId = df.threadId.unique()
         for id in threadId:
-            message = self.df_[[self.df_['threadId'] == id]]['body'].to_list()
+            message = df[[df['threadId'] == id]]['body'].to_list()
             transformed = self.vectorizer.fit_transform([text])
             words_imp = transformed.toarray()
             max_word = np.argmax(words_imp[0], axis=0)
@@ -154,10 +150,10 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
 
 
     def __clean(self, df):
-        self.df_ = df.snippet.apply(self.__cleaner)
+        df = df.snippet.apply(self.__cleaner)
 
 
-    def __analyse_history(self, dataframe):
+    def __analyse_history(self, df):
         """
         Analyse the 'historyId' field of the dataframe, it attribute a score to each field
         :param dataframe: The dataframe that contains the mails informations
@@ -165,12 +161,12 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
          {pandas.Dataframe}: dataframe that contains a score associated to each historyId. this score represent
          the number of message linked to the thread
         """
-        historyId = dataframe.historyId.unique()
+        historyId = df.historyId.unique()
         for id in historyId:
-            count = dataframe[dataframe['historyId'] == id].size
-            dataframe.loc[dataframe['historyId'] == id, 'importance_thread'] = count
+            count = df[df['historyId'] == id].size
+            df.loc[df['historyId'] == id, 'importance_thread'] = count
 
-    def __analyse_thread(self, dataframe):
+    def __analyse_thread(self, df):
         """
         Analyse the thredId field of the dataframe, it attribute a score to each field
         :param dataframe: The dataframe that contains the mails informations
@@ -178,10 +174,10 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
             dataframe that contains a score associated to each threadId. this score represent the number of message
             linked to the thread
         """
-        threadId = dataframe.threadId.unique()
+        threadId = df.threadId.unique()
         for id in threadId:
-            count = len(dataframe[dataframe['threadId'] == id])
-            dataframe.loc[dataframe['threadId'] == id, 'importance_thread'] = count
+            count = len(df[df['threadId'] == id])
+            df.loc[df['threadId'] == id, 'importance_thread'] = count
 
     def __transformPayload(self, payload):
         """
