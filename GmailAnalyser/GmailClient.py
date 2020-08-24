@@ -221,5 +221,4 @@ if __name__ == "__main__":
     analyser.fit(dataframe=mails_df)
     results = analyser.transform(dataframe=mails_df)
     print(mails_df.head())
-# mails_df = analyser.transform()
-# analyser.df_.to_csv('./people_forums_mail.csv', header=True)
+

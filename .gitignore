@@ -113,6 +113,8 @@ venv.bak/
 #gmail api file 
 credentials.json
 token.pickle
+.DS_Store
+
 # Spyder project settings
 .spyderproject
 .spyproject

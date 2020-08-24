@@ -1,12 +1,8 @@
-import couchbase
 from couchbase.cluster import Cluster
 from couchbase.cluster import PasswordAuthenticator, ClusterOptions
 from couchbase.exceptions import BucketAlreadyExistsException, BucketDoesNotExistException, BucketNotFoundException
 from zodiac_service.config.config import CreateConfig
-from zodiac_service.Models.User import User
-from zodiac_service.Models.Follow import Follow
-import time
-import uuid
+
 
 
 def createDB():
@@ -84,6 +80,4 @@ class DB():
 if __name__ == "__main__":
     config = CreateConfig(path='../config/config.json')
     db = DB(config=config['couchbase'])
-   # id = f"{uuid.uuid4()}"
-    #db.addUser(uid=id, User=User(type="user", mail="demeremy@gmail.com", preferences=['wolrd'], added='date',
-                            #     follower=[Follow('2344')], following=[Follow('123444')]))
+

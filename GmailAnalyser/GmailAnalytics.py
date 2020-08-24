@@ -32,9 +32,7 @@ class GMailAnalytics(TransformerMixin, BaseEstimator):
         df['response'] = df.Subject.apply(isResponse)
         df['body'] = df.body.apply(cleanBody)
         self.__standardize_text(df)
-        #self.hotMail_ = self.__hotMail(df)
         self.important_mail_ = self.__filter(df, emails=[''])
-        #self.df_['theme'] = self.df_.body.apply(self._theme)
         return df
 
     def __hotMail(self, df):
